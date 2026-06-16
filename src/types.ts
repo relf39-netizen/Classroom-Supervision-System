@@ -22,9 +22,9 @@ export interface AcademicYear {
 }
 
 export enum UserRole {
-  ADMIN = "ADMIN",
-  DIRECTOR = "DIRECTOR",
-  TEACHER = "TEACHER",
+  ADMIN = "admin",
+  DIRECTOR = "director",
+  TEACHER = "teacher",
 }
 
 export interface EvaluationItem {

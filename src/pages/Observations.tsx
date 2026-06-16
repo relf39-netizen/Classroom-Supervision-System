@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Observation, User, UserRole, AcademicYear } from "../types";
-import { db_ops } from "../lib/db";
-import { Search, Plus, FileText, Download, Filter, ChevronRight, Eye } from "lucide-react";
+import { Observation, User, UserRole } from "../types";
+import { api_ops } from "../lib/api";
+import { Search, Plus, FileText, Download, Filter, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { orderBy, where } from "firebase/firestore";
 
 import * as XLSX from "xlsx";
 
@@ -21,17 +20,18 @@ export default function Observations({ user, onNew, onView }: ObservationsProps)
   const [yearFilter, setYearFilter] = useState("2567");
 
   useEffect(() => {
-    let constraints: any[] = [orderBy("date", "desc")];
-    if (user.role === UserRole.TEACHER) {
-      constraints.push(where("teacherUserId", "==", user.userId));
-    }
-
-    const unsubscribe = db_ops.subscribe("observations", constraints, (data: any[]) => {
-      setList(data as Observation[]);
+    const loadData = async () => {
+      setLoading(true);
+      const filters: any = {};
+      if (user.role === UserRole.TEACHER) {
+        filters.teacherUserId = user.userId;
+      }
+      const data = await api_ops.list<Observation>("observations", filters);
+      setList(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    loadData();
   }, [user]);
 
   const filtered = list.filter(o => 

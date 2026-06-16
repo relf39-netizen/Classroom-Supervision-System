@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Observation, ObservationScore, EvaluationItem, EVALUATION_CATEGORIES, User } from "../../types";
-import { db_ops } from "../../lib/db";
+import { api_ops } from "../../lib/api";
 import { ArrowLeft, Download, Printer, User as UserIcon, Calendar, BookOpen, Star, Camera, FileCheck } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -21,8 +21,8 @@ export default function ObservationDetail({ observation, onBack, user }: Observa
   useEffect(() => {
     const loadData = async () => {
       const [sList, iList] = await Promise.all([
-        db_ops.list<ObservationScore>(`observations/${observation.id}/scores`),
-        db_ops.list<EvaluationItem>("evaluationItems")
+        api_ops.list<ObservationScore>("scores", { observationId: observation.id }),
+        api_ops.list<EvaluationItem>("evaluationItems", {})
       ]);
       setScores(sList);
       setItems(iList.sort((a,b) => a.itemId.localeCompare(b.itemId, undefined, {numeric: true})));

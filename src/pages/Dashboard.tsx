@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Observation, Teacher, mapScoreToLevel } from "../types";
-import { db_ops } from "../lib/db";
+import { api_ops } from "../lib/api";
 import { Users, ClipboardCheck, GraduationCap, TrendingUp, Calendar as CalendarIcon, Package, Clock } from "lucide-react";
 import { 
   Chart as ChartJS, 
@@ -46,8 +46,8 @@ export default function Dashboard({ user }: DashboardProps) {
   useEffect(() => {
     const loadData = async () => {
       const [teachers, observations] = await Promise.all([
-        db_ops.list<Teacher>("teachers"),
-        db_ops.list<Observation>("observations"),
+        api_ops.list<Teacher>("teachers"),
+        api_ops.list<Observation>("observations"),
       ]);
 
       setStats({

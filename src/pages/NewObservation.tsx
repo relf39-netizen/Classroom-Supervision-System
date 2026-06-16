@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Teacher, EvaluationItem, Observation, mapScoreToLevel, EVALUATION_CATEGORIES } from "../types";
-import { db_ops } from "../lib/db";
+import { api_ops } from "../lib/api";
 import { ClipboardCheck, Save, ArrowLeft, ArrowRight, Camera, User as UserIcon, BookOpen } from "lucide-react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -34,8 +34,8 @@ export default function NewObservation({ user, onBack }: NewObservationProps) {
   useEffect(() => {
     const loadMeta = async () => {
       const [tList, iList] = await Promise.all([
-        db_ops.list<Teacher>("teachers"),
-        db_ops.list<EvaluationItem>("evaluationItems", []),
+        api_ops.list<Teacher>("teachers"),
+        api_ops.list<EvaluationItem>("evaluationItems", {}),
       ]);
       setTeachers(tList);
       setEvalItems(iList.sort((a,b) => a.itemId.localeCompare(b.itemId, undefined, {numeric: true})));
@@ -61,7 +61,11 @@ export default function NewObservation({ user, onBack }: NewObservationProps) {
     setIsSaving(true);
     const { total, avg, level } = calculateResults();
     
-    const observationId = await db_ops.create("observations", {
+    const timestamp = new Date().toISOString();
+    const observationId = `obs_${Date.now()}`;
+    
+    await api_ops.create("observations", {
+      id: observationId,
       ...form,
       teacherId: selectedTeacher.teacherId,
       teacherName: selectedTeacher.name,
@@ -71,19 +75,18 @@ export default function NewObservation({ user, onBack }: NewObservationProps) {
       totalScore: total,
       averageScore: avg,
       evaluationLevel: level,
+      createdAt: timestamp
     });
 
-    if (observationId) {
-      for (const item of evalItems) {
-        await db_ops.create(`observations/${observationId}/scores`, {
-          observationId,
-          itemId: item.itemId,
-          score: scores[item.itemId] || 0,
-          remark: ""
-        });
-      }
-      onBack();
+    for (const item of evalItems) {
+      await api_ops.create("scores", {
+        observationId,
+        itemId: item.itemId,
+        score: scores[item.itemId] || 0,
+        remark: ""
+      });
     }
+    onBack();
     setIsSaving(false);
   };
 

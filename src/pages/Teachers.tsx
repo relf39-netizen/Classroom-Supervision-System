@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Teacher, UserRole } from "../types";
-import { db_ops } from "../lib/db";
+import { api_ops } from "../lib/api";
 import { Users, Plus, Search, Mail, BookOpen, Trash2, Edit2 } from "lucide-react";
 
 export default function Teachers() {
@@ -10,7 +10,7 @@ export default function Teachers() {
 
   useEffect(() => {
     const load = async () => {
-      const data = await db_ops.list<Teacher>("teachers");
+      const data = await api_ops.list<Teacher>("teachers");
       setTeachers(data);
       setLoading(false);
     };

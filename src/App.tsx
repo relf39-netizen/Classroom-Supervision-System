@@ -1,22 +1,14 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect } from "react";
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from "firebase/auth";
-import { auth, db } from "./lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { User, UserRole } from "./types";
-import { LogIn, Loader2 } from "lucide-react";
+import { useState, useEffect, FormEvent } from "react";
+import { User } from "./types";
+import { LogIn, Loader2, User as UserIcon, Lock } from "lucide-react";
 import Shell from "./components/layout/Shell";
 import Dashboard from "./pages/Dashboard";
 import Observations from "./pages/Observations";
 import NewObservation from "./pages/NewObservation";
 import ObservationDetail from "./components/observation/ObservationDetail";
 import Teachers from "./pages/Teachers";
-import { seedDatabase } from "./lib/seeds";
 import { Observation as ObservationType } from "./types";
+import { api_ops } from "./lib/api";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -24,57 +16,48 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [view, setView] = useState("dashboard");
   const [selectedObs, setSelectedObs] = useState<ObservationType | null>(null);
+  
+  // Login form state
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    seedDatabase();
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", fbUser.uid));
-          if (userDoc.exists()) {
-            setUser(userDoc.data() as User);
-          } else {
-            // New user - default to TEACHER for safety, Admin must upgrade
-            const newUser: User = {
-              userId: fbUser.uid,
-              username: fbUser.email || fbUser.displayName || "Unknown",
-              fullname: fbUser.displayName || "Unknown",
-              role: UserRole.TEACHER,
-              createdAt: new Date().toISOString(),
-            };
-            await setDoc(doc(db, "users", fbUser.uid), {
-              ...newUser,
-              createdAt: serverTimestamp(),
-            });
-            setUser(newUser);
-          }
-        } catch (err) {
-          console.error("Auth error:", err);
-          setAuthError("Failed to load user profile.");
-        }
-      } else {
-        setUser(null);
-        setView("dashboard");
+    // Check for saved session
+    const savedUser = localStorage.getItem("supervision_user");
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem("supervision_user");
       }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
+    setLoading(false);
   }, []);
 
-  const handleLogin = async () => {
-    setLoading(true);
-    const provider = new GoogleAuthProvider();
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) return;
+    
+    setIsLoggingIn(true);
+    setAuthError(null);
+    
     try {
-      await signInWithPopup(auth, provider);
+      const userData = await api_ops.login(username, password);
+      localStorage.setItem("supervision_user", JSON.stringify(userData));
+      setUser(userData);
     } catch (err: any) {
-      console.error("Login error:", err);
-      setAuthError(err.message);
-      setLoading(false);
+      setAuthError(err.message || "Failed to login");
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => {
+    localStorage.removeItem("supervision_user");
+    setUser(null);
+    setView("dashboard");
+  };
 
   const renderContent = () => {
     if (view === "observations") {
@@ -103,48 +86,100 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-gov-blue" />
+      <div className="min-h-screen flex items-center justify-center bg-dark-base">
+        <Loader2 className="w-8 h-8 animate-spin text-gov-gold" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-dark-base px-4 font-sans">
-        <div className="w-full max-w-md bg-dark-surface rounded-[2rem] shadow-2xl border border-dark-border overflow-hidden text-left">
-          <div className="thai-gov-gradient p-10 text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-black/10"></div>
-            <div className="relative z-10">
-              <div className="w-24 h-24 bg-white rounded-full mx-auto mb-6 flex items-center justify-center p-2 shadow-2xl">
-                 <img src="/src/assets/images/school_logo_1781579037134.jpg" alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-dark-base px-4 font-sans py-20">
+        <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+          <div className="bg-dark-surface rounded-[2.5rem] shadow-2xl border border-dark-border overflow-hidden">
+            <div className="thai-gov-gradient p-12 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-black/5"></div>
+              <div className="relative z-10">
+                <div className="w-24 h-24 bg-dark-base rounded-[2rem] mx-auto mb-8 flex items-center justify-center p-3 border border-white/10 shadow-2xl">
+                   <img src="/src/assets/images/school_logo_1781579037134.jpg" alt="Logo" className="w-full h-full object-contain grayscale brightness-200" referrerPolicy="no-referrer" />
+                </div>
+                <h1 className="text-3xl font-black text-white mb-2 leading-tight tracking-tight uppercase">
+                  Classroom Supervision
+                </h1>
+                <p className="text-gov-gold-light font-black uppercase tracking-[0.4em] text-[10px]">ระบบนิเทศออนไลน์ • หนองหว้า</p>
               </div>
-              <h1 className="text-2xl font-black text-white mb-2 leading-tight tracking-tight">
-                ระบบนิเทศชั้นเรียนออนไลน์
-              </h1>
-              <p className="text-white/80 font-bold uppercase tracking-[0.2em] text-[10px]">โรงเรียนบ้านหนองหว้า</p>
             </div>
+            
+            <form onSubmit={handleLogin} className="p-12 space-y-8 bg-dark-surface">
+              {authError && (
+                <div className="p-5 bg-red-500/10 text-red-400 rounded-2xl text-[10px] font-black border border-red-500/20 uppercase tracking-widest text-center shadow-lg">
+                  {authError}
+                </div>
+              )}
+              
+              <div className="space-y-6">
+                <div className="space-y-3">
+                   <label className="text-[10px] font-black text-gov-gold uppercase tracking-[0.2em] ml-2">Username</label>
+                   <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-gov-gold transition-colors text-text-muted">
+                        <UserIcon className="h-5 w-5" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="block w-full bg-dark-base border border-dark-border text-white rounded-2xl py-4.5 pl-14 pr-4 focus:ring-1 focus:ring-gov-gold focus:border-gov-gold outline-none transition-all placeholder:text-text-muted/30 font-bold"
+                        placeholder="กรอกชื่อผู้ใช้งาน"
+                      />
+                   </div>
+                </div>
+
+                <div className="space-y-3">
+                   <label className="text-[10px] font-black text-gov-gold uppercase tracking-[0.2em] ml-2">Password</label>
+                   <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-gov-gold transition-colors text-text-muted">
+                        <Lock className="h-5 w-5" />
+                      </div>
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full bg-dark-base border border-dark-border text-white rounded-2xl py-4.5 pl-14 pr-4 focus:ring-1 focus:ring-gov-gold focus:border-gov-gold outline-none transition-all placeholder:text-text-muted/30 font-bold"
+                        placeholder="••••••••"
+                      />
+                   </div>
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-gov-gold to-gov-gold-dark text-white font-black py-5 px-6 rounded-2xl transition-all shadow-2xl shadow-gov-gold/20 hover:brightness-110 active:scale-[0.98] uppercase tracking-[0.2em] text-xs disabled:opacity-50 disabled:grayscale"
+              >
+                {isLoggingIn ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    Secure Login
+                  </>
+                )}
+              </button>
+              
+              <div className="pt-8 text-center border-t border-dark-border">
+                <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
+                  Authentication Layer v2.0
+                </p>
+              </div>
+            </form>
           </div>
           
-          <div className="p-10 bg-dark-surface">
-            {authError && (
-              <div className="mb-8 p-4 bg-red-500/10 text-red-400 rounded-2xl text-xs font-bold border border-red-500/20 uppercase tracking-widest">
-                {authError}
-              </div>
-            )}
-            
-            <button
-              onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-gov-gold to-gov-gold-dark text-white font-black py-4.5 px-6 rounded-2xl transition-all shadow-xl shadow-gov-gold/10 hover:brightness-110 active:scale-[0.98] uppercase tracking-wider text-sm"
-            >
-              <LogIn className="w-5 h-5" />
-              Sign in with Google
-            </button>
-            
-            <div className="mt-12 text-center text-text-muted text-[10px] font-bold uppercase tracking-widest opacity-50">
-              <p>© 2026 Nong Wa School • Education System</p>
-            </div>
-          </div>
+          <p className="mt-10 text-center text-text-muted text-[10px] font-black uppercase tracking-[0.3em] opacity-40 leading-loose">
+            © 2026 Nong Wa School<br/>
+            Education Management System
+          </p>
         </div>
       </div>
     );
