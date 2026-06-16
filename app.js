@@ -1,4 +1,5 @@
 // Plesk Startup File (app.js)
-// This file points Node.js to our compiled production server in the dist/ folder
-
-import './dist/server.cjs';
+import('./dist/server.cjs').catch(err => {
+    console.error('Failed to load server:', err);
+    process.exit(1);
+});
