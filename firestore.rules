@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'ADMIN';
+    }
+
+    function isDirector() {
+      return isSignedIn() && getUserData().role == 'DIRECTOR';
+    }
+
+    function isTeacher() {
+      return isSignedIn() && getUserData().role == 'TEACHER';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn(); // All signed in users can see names/roles to find teachers
+      allow write: if isAdmin();
+    }
+
+    match /teachers/{teacherId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /academicYears/{yearId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /evaluationItems/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /observations/{obsId} {
+      allow read: if isAdmin() || isDirector() || (isTeacher() && resource.data.teacherUserId == request.auth.uid);
+      allow create: if isDirector() || isAdmin();
+      allow update: if isDirector() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /observations/{obsId}/scores/{scoreId} {
+      allow read: if isAdmin() || isDirector() || (isTeacher() && get(/databases/$(database)/documents/observations/$(obsId)).data.teacherUserId == request.auth.uid);
+      allow create, update: if isDirector() || isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

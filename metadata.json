@@ -1,0 +1,6 @@
+{
+  "name": "Classroom Supervision System",
+  "description": "ระบบนิเทศชั้นเรียนออนไลน์ โรงเรียนบ้านหนองหว้า รองรับการบันทึกผล วิเคราะห์ข้อมูล และออกรายงาน PDF",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

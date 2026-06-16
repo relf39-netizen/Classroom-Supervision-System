@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System users with roles",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "fullname": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "DIRECTOR", "TEACHER"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "username", "fullname", "role"]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Teacher profile information",
+      "type": "object",
+      "properties": {
+        "teacherId": { "type": "string" },
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "subjectGroup": { "type": "string" },
+        "phone": { "type": "string" },
+        "userId": { "type": "string", "description": "Link to User if they have login access" }
+      },
+      "required": ["teacherId", "name", "position"]
+    },
+    "AcademicYear": {
+      "title": "Academic Year",
+      "description": "School years and semesters",
+      "type": "object",
+      "properties": {
+        "year": { "type": "string" },
+        "semester": { "type": "string" }
+      },
+      "required": ["year", "semester"]
+    },
+    "EvaluationItem": {
+      "title": "Evaluation Item",
+      "description": "Items used in the supervision form",
+      "type": "object",
+      "properties": {
+        "itemId": { "type": "string" },
+        "category": { "type": "string" },
+        "itemName": { "type": "string" },
+        "maxScore": { "type": "number" }
+      },
+      "required": ["itemId", "category", "itemName", "maxScore"]
+    },
+    "Observation": {
+      "title": "Observation",
+      "description": "Supervision records",
+      "type": "object",
+      "properties": {
+        "observationId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "teacherName": { "type": "string" },
+        "observerId": { "type": "string" },
+        "observerName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "subject": { "type": "string" },
+        "gradeLevel": { "type": "string" },
+        "classRoom": { "type": "string" },
+        "studentCount": { "type": "number" },
+        "academicYear": { "type": "string" },
+        "semester": { "type": "string" },
+        "strengths": { "type": "string" },
+        "suggestions": { "type": "string" },
+        "developmentPlan": { "type": "string" },
+        "totalScore": { "type": "number" },
+        "averageScore": { "type": "number" },
+        "evaluationLevel": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teacherId", "observerId", "date", "totalScore", "evaluationLevel"]
+    },
+    "ObservationScore": {
+      "title": "Observation Score",
+      "description": "Scores for each evaluation item per observation",
+      "type": "object",
+      "properties": {
+        "observationId": { "type": "string" },
+        "itemId": { "type": "string" },
+        "score": { "type": "number" },
+        "remark": { "type": "string" }
+      },
+      "required": ["observationId", "itemId", "score"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/teachers/{teacherId}": {
+      "schema": "Teacher",
+      "description": "Teacher records"
+    },
+    "/academicYears/{yearId}": {
+      "schema": "AcademicYear",
+      "description": "Academic years"
+    },
+    "/evaluationItems/{itemId}": {
+      "schema": "EvaluationItem",
+      "description": "Configurable evaluation items"
+    },
+    "/observations/{observationId}": {
+      "schema": "Observation",
+      "description": "Main supervision records"
+    },
+    "/observations/{observationId}/scores/{scoreId}": {
+      "schema": "ObservationScore",
+      "description": "Detailed scores for an observation"
+    }
+  }
+}
